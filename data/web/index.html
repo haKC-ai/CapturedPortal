@@ -1,0 +1,881 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CAPTURED PORTAL</title>
+    <style>
+        :root {
+            --bg-primary: #0a0a0f;
+            --bg-secondary: #0f0f18;
+            --bg-card: #12121c;
+            --text-primary: #00ff41;
+            --text-secondary: #00cc33;
+            --text-dim: #006622;
+            --accent-cyan: #00ffff;
+            --accent-magenta: #ff00ff;
+            --accent-warning: #ffff00;
+            --accent-error: #ff3333;
+            --border-color: #00ff4133;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Courier New', 'Monaco', monospace;
+            background-color: var(--bg-primary);
+            color: var(--text-primary);
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        /* Matrix rain background */
+        #matrix-bg {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+            opacity: 0.1;
+        }
+
+        /* Scanline effect */
+        .scanlines {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 1000;
+            background: linear-gradient(
+                to bottom,
+                transparent 50%,
+                rgba(0, 0, 0, 0.1) 51%
+            );
+            background-size: 100% 4px;
+        }
+
+        /* Header */
+        header {
+            background: var(--bg-secondary);
+            border-bottom: 1px solid var(--border-color);
+            padding: 1rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo {
+            font-size: 1rem;
+            font-weight: bold;
+            text-shadow: 0 0 10px var(--text-primary);
+            letter-spacing: 0;
+            white-space: pre;
+            line-height: 1.1;
+            font-family: 'Consolas', 'Monaco', 'Lucida Console', 'Liberation Mono', 'DejaVu Sans Mono', monospace;
+            text-align: left;
+            margin: 0;
+        }
+
+        .logo .portal {
+            color: var(--accent-cyan);
+        }
+
+        .status-bar {
+            display: flex;
+            gap: 1.5rem;
+            font-size: 0.8rem;
+        }
+
+        .status-item {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+        }
+
+        .status-dot.online { background: var(--text-primary); }
+        .status-dot.scanning { background: var(--accent-cyan); animation: blink 0.5s infinite; }
+        .status-dot.warning { background: var(--accent-warning); }
+        .status-dot.error { background: var(--accent-error); }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        @keyframes blink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0; }
+        }
+
+        /* Main container */
+        .container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+            padding: 1rem;
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        @media (max-width: 900px) {
+            .container {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* Cards */
+        .card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            overflow: hidden;
+        }
+
+        .card-header {
+            background: var(--bg-secondary);
+            padding: 0.75rem 1rem;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .card-title {
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .card-title::before {
+            content: '[ ';
+            color: var(--text-dim);
+        }
+
+        .card-title::after {
+            content: ' ]';
+            color: var(--text-dim);
+        }
+
+        .card-body {
+            padding: 1rem;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        /* Network list */
+        .network-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.75rem;
+            border-bottom: 1px solid var(--border-color);
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .network-item:hover {
+            background: rgba(0, 255, 65, 0.05);
+        }
+
+        .network-item:last-child {
+            border-bottom: none;
+        }
+
+        .network-item.portal {
+            border-left: 3px solid var(--accent-cyan);
+        }
+
+        .network-info {
+            display: flex;
+            flex-direction: column;
+            gap: 0.25rem;
+        }
+
+        .network-ssid {
+            font-weight: bold;
+        }
+
+        .network-meta {
+            font-size: 0.75rem;
+            color: var(--text-dim);
+        }
+
+        .network-signal {
+            display: flex;
+            gap: 2px;
+            align-items: flex-end;
+        }
+
+        .signal-bar {
+            width: 4px;
+            background: var(--text-dim);
+            transition: background 0.3s;
+        }
+
+        .signal-bar.active {
+            background: var(--text-primary);
+        }
+
+        /* Portal details */
+        .portal-detail {
+            margin-bottom: 1rem;
+        }
+
+        .portal-detail label {
+            display: block;
+            font-size: 0.75rem;
+            color: var(--text-dim);
+            margin-bottom: 0.25rem;
+            text-transform: uppercase;
+        }
+
+        .portal-detail .value {
+            font-size: 0.9rem;
+            word-break: break-all;
+        }
+
+        /* Buttons */
+        .btn {
+            background: transparent;
+            border: 1px solid var(--text-primary);
+            color: var(--text-primary);
+            padding: 0.5rem 1rem;
+            font-family: inherit;
+            font-size: 0.8rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .btn:hover {
+            background: var(--text-primary);
+            color: var(--bg-primary);
+            box-shadow: 0 0 15px var(--text-primary);
+        }
+
+        .btn.danger {
+            border-color: var(--accent-error);
+            color: var(--accent-error);
+        }
+
+        .btn.danger:hover {
+            background: var(--accent-error);
+        }
+
+        .btn.accent {
+            border-color: var(--accent-cyan);
+            color: var(--accent-cyan);
+        }
+
+        .btn.accent:hover {
+            background: var(--accent-cyan);
+            color: var(--bg-primary);
+        }
+
+        /* Progress bar */
+        .progress-container {
+            margin: 1rem 0;
+        }
+
+        .progress-bar {
+            height: 6px;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 3px;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: var(--text-primary);
+            transition: width 0.3s;
+            box-shadow: 0 0 10px var(--text-primary);
+        }
+
+        .progress-text {
+            font-size: 0.75rem;
+            color: var(--text-dim);
+            margin-top: 0.25rem;
+        }
+
+        /* Log output */
+        .log-output {
+            background: var(--bg-primary);
+            border: 1px solid var(--border-color);
+            padding: 1rem;
+            font-size: 0.8rem;
+            height: 200px;
+            overflow-y: auto;
+            font-family: 'Courier New', monospace;
+        }
+
+        .log-line {
+            margin-bottom: 0.25rem;
+        }
+
+        .log-time {
+            color: var(--text-dim);
+        }
+
+        .log-info { color: var(--text-primary); }
+        .log-warn { color: var(--accent-warning); }
+        .log-error { color: var(--accent-error); }
+        .log-success { color: var(--accent-cyan); }
+
+        /* Stats grid */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        .stat-box {
+            text-align: center;
+            padding: 1rem;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+        }
+
+        .stat-value {
+            font-size: 2rem;
+            font-weight: bold;
+            text-shadow: 0 0 10px currentColor;
+        }
+
+        .stat-label {
+            font-size: 0.7rem;
+            color: var(--text-dim);
+            text-transform: uppercase;
+            margin-top: 0.25rem;
+        }
+
+        /* Glitch effect */
+        .glitch {
+            animation: glitch 2s infinite;
+        }
+
+        @keyframes glitch {
+            0%, 90%, 100% { transform: translate(0); }
+            92% { transform: translate(-2px, 1px); }
+            94% { transform: translate(2px, -1px); }
+            96% { transform: translate(-1px, -1px); }
+            98% { transform: translate(1px, 1px); }
+        }
+
+        /* Typing cursor */
+        .cursor {
+            animation: cursor-blink 1s infinite;
+        }
+
+        @keyframes cursor-blink {
+            0%, 50% { opacity: 1; }
+            51%, 100% { opacity: 0; }
+        }
+
+        /* Full width card */
+        .full-width {
+            grid-column: 1 / -1;
+        }
+
+        /* Form inputs */
+        input[type="text"], input[type="number"] {
+            background: var(--bg-primary);
+            border: 1px solid var(--border-color);
+            color: var(--text-primary);
+            padding: 0.5rem;
+            font-family: inherit;
+            width: 100%;
+            margin-bottom: 0.5rem;
+        }
+
+        input:focus {
+            outline: none;
+            border-color: var(--text-primary);
+            box-shadow: 0 0 5px var(--text-primary);
+        }
+
+        /* Enumeration results */
+        .enum-result {
+            padding: 0.5rem;
+            margin-bottom: 0.5rem;
+            border-left: 3px solid var(--text-primary);
+            background: rgba(0, 255, 65, 0.05);
+        }
+
+        .enum-result.success {
+            border-left-color: var(--accent-cyan);
+        }
+    </style>
+</head>
+<body>
+    <div class="scanlines"></div>
+    <canvas id="matrix-bg"></canvas>
+
+    <header>
+        <pre class="logo">┏┓┏┓┏┓┏┳┓┳┳┳┓┏┓┳┓ <span class="portal">┏┓┏┓┳┓┏┳┓┏┓┓</span>
+┃ ┣┫┃┃ ┃ ┃┃┣┫┣ ┃┃ <span class="portal">┃┃┃┃┣┫ ┃ ┣┫┃</span>
+┗┛┛┗┣┛ ┻ ┗┛┛┗┗┛┻┛ <span class="portal">┣┛┗┛┛┗ ┻ ┛┗┗┛</span></pre>
+        <div class="status-bar">
+            <div class="status-item">
+                <div class="status-dot" id="status-wifi"></div>
+                <span id="status-wifi-text">INITIALIZING</span>
+            </div>
+            <div class="status-item">
+                <div class="status-dot" id="status-power"></div>
+                <span id="status-power-text">USB</span>
+            </div>
+            <div class="status-item">
+                <span id="uptime">00:00:00</span>
+            </div>
+        </div>
+    </header>
+
+    <div class="container">
+        <!-- Network Scanner -->
+        <div class="card">
+            <div class="card-header">
+                <span class="card-title">Network Scanner</span>
+                <button class="btn" onclick="startScan()">SCAN</button>
+            </div>
+            <div class="card-body">
+                <div class="stats-grid">
+                    <div class="stat-box">
+                        <div class="stat-value" id="stat-networks">0</div>
+                        <div class="stat-label">Networks</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-value" id="stat-open" style="color: var(--accent-warning)">0</div>
+                        <div class="stat-label">Open</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-value" id="stat-portals" style="color: var(--accent-cyan)">0</div>
+                        <div class="stat-label">Portals</div>
+                    </div>
+                </div>
+                <div id="network-list">
+                    <div class="network-item" onclick="selectNetwork(0)">
+                        <span style="color: var(--text-dim)">Scanning...</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Portal Details -->
+        <div class="card">
+            <div class="card-header">
+                <span class="card-title">Portal Analysis</span>
+                <button class="btn accent" onclick="analyzePortal()" id="btn-analyze" disabled>ANALYZE</button>
+            </div>
+            <div class="card-body" id="portal-details">
+                <p style="color: var(--text-dim)">Select a portal from the network list</p>
+            </div>
+        </div>
+
+        <!-- Enumeration -->
+        <div class="card">
+            <div class="card-header">
+                <span class="card-title">Enumeration</span>
+                <button class="btn" onclick="startEnumeration()" id="btn-enum" disabled>START</button>
+            </div>
+            <div class="card-body">
+                <div class="portal-detail">
+                    <label>Max Attempts</label>
+                    <input type="number" id="max-attempts" value="50" min="1" max="500">
+                </div>
+                <div class="progress-container" id="enum-progress" style="display: none;">
+                    <div class="progress-bar">
+                        <div class="progress-fill" id="enum-progress-fill" style="width: 0%"></div>
+                    </div>
+                    <div class="progress-text" id="enum-progress-text">0 / 0</div>
+                </div>
+                <div id="enum-results"></div>
+            </div>
+        </div>
+
+        <!-- LLM Insights -->
+        <div class="card">
+            <div class="card-header">
+                <span class="card-title">LLM Insights</span>
+                <button class="btn accent" onclick="runLLM()" id="btn-llm" disabled>RUN LLM</button>
+            </div>
+            <div class="card-body" id="llm-output">
+                <p style="color: var(--text-dim)">LLM analysis available after portal capture</p>
+            </div>
+        </div>
+
+        <!-- Activity Log -->
+        <div class="card full-width">
+            <div class="card-header">
+                <span class="card-title">Activity Log</span>
+                <button class="btn danger" onclick="clearLog()">CLEAR</button>
+            </div>
+            <div class="card-body">
+                <div class="log-output" id="log-output">
+                    <div class="log-line">
+                        <span class="log-time">[00:00:00]</span>
+                        <span class="log-info"> System initialized</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Matrix rain effect
+        const canvas = document.getElementById('matrix-bg');
+        const ctx = canvas.getContext('2d');
+
+        function resizeCanvas() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        }
+        resizeCanvas();
+        window.addEventListener('resize', resizeCanvas);
+
+        const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789@#$%&*<>[]{}';
+        const fontSize = 14;
+        let columns = canvas.width / fontSize;
+        let drops = [];
+
+        for (let i = 0; i < columns; i++) {
+            drops[i] = Math.random() * -100;
+        }
+
+        function drawMatrix() {
+            ctx.fillStyle = 'rgba(10, 10, 15, 0.05)';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            ctx.fillStyle = '#00ff41';
+            ctx.font = fontSize + 'px monospace';
+
+            for (let i = 0; i < drops.length; i++) {
+                const char = chars[Math.floor(Math.random() * chars.length)];
+                ctx.fillText(char, i * fontSize, drops[i] * fontSize);
+
+                if (drops[i] * fontSize > canvas.height && Math.random() > 0.975) {
+                    drops[i] = 0;
+                }
+                drops[i]++;
+            }
+        }
+
+        setInterval(drawMatrix, 50);
+
+        // State
+        let networks = [];
+        let selectedNetwork = null;
+        let startTime = Date.now();
+
+        // Update uptime
+        setInterval(() => {
+            const elapsed = Math.floor((Date.now() - startTime) / 1000);
+            const hours = Math.floor(elapsed / 3600).toString().padStart(2, '0');
+            const mins = Math.floor((elapsed % 3600) / 60).toString().padStart(2, '0');
+            const secs = (elapsed % 60).toString().padStart(2, '0');
+            document.getElementById('uptime').textContent = `${hours}:${mins}:${secs}`;
+        }, 1000);
+
+        // Logging
+        function log(message, type = 'info') {
+            const logOutput = document.getElementById('log-output');
+            const now = new Date();
+            const time = now.toTimeString().split(' ')[0];
+            const line = document.createElement('div');
+            line.className = 'log-line';
+            line.innerHTML = `<span class="log-time">[${time}]</span> <span class="log-${type}">${message}</span>`;
+            logOutput.appendChild(line);
+            logOutput.scrollTop = logOutput.scrollHeight;
+        }
+
+        function clearLog() {
+            document.getElementById('log-output').innerHTML = '';
+            log('Log cleared', 'info');
+        }
+
+        // API calls
+        async function fetchAPI(endpoint) {
+            try {
+                const response = await fetch('/api/' + endpoint);
+                return await response.json();
+            } catch (e) {
+                log('API error: ' + e.message, 'error');
+                return null;
+            }
+        }
+
+        async function startScan() {
+            log('Starting network scan...', 'info');
+            document.getElementById('status-wifi').className = 'status-dot scanning';
+            document.getElementById('status-wifi-text').textContent = 'SCANNING';
+
+            const result = await fetchAPI('scan');
+            if (result) {
+                networks = result.networks || [];
+                updateNetworkList();
+                log(`Scan complete: ${networks.length} networks found`, 'success');
+            }
+
+            document.getElementById('status-wifi').className = 'status-dot online';
+            document.getElementById('status-wifi-text').textContent = 'READY';
+        }
+
+        function updateNetworkList() {
+            const list = document.getElementById('network-list');
+            const openCount = networks.filter(n => n.isOpen).length;
+            const portalCount = networks.filter(n => n.hasPortal).length;
+
+            document.getElementById('stat-networks').textContent = networks.length;
+            document.getElementById('stat-open').textContent = openCount;
+            document.getElementById('stat-portals').textContent = portalCount;
+
+            if (networks.length === 0) {
+                list.innerHTML = '<div class="network-item"><span style="color: var(--text-dim)">No networks found</span></div>';
+                return;
+            }
+
+            list.innerHTML = networks.map((net, i) => `
+                <div class="network-item ${net.hasPortal ? 'portal' : ''}" onclick="selectNetwork(${i})">
+                    <div class="network-info">
+                        <span class="network-ssid">${net.hasPortal ? '* ' : ''}${escapeHtml(net.ssid)}</span>
+                        <span class="network-meta">${net.bssid} | CH${net.channel} | ${net.isOpen ? 'OPEN' : 'SECURED'}</span>
+                    </div>
+                    <div class="network-signal">
+                        ${renderSignal(net.rssi)}
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function renderSignal(rssi) {
+            const bars = rssi > -50 ? 4 : rssi > -60 ? 3 : rssi > -70 ? 2 : rssi > -80 ? 1 : 0;
+            return [1, 2, 3, 4].map(i =>
+                `<div class="signal-bar ${i <= bars ? 'active' : ''}" style="height: ${i * 4 + 4}px"></div>`
+            ).join('');
+        }
+
+        function selectNetwork(index) {
+            selectedNetwork = networks[index];
+            log(`Selected: ${selectedNetwork.ssid}`, 'info');
+
+            const details = document.getElementById('portal-details');
+
+            if (selectedNetwork.hasPortal) {
+                document.getElementById('btn-analyze').disabled = false;
+                document.getElementById('btn-enum').disabled = false;
+                document.getElementById('btn-llm').disabled = false;
+
+                details.innerHTML = `
+                    <div class="portal-detail">
+                        <label>SSID</label>
+                        <div class="value">${escapeHtml(selectedNetwork.ssid)}</div>
+                    </div>
+                    <div class="portal-detail">
+                        <label>Portal URL</label>
+                        <div class="value">${escapeHtml(selectedNetwork.portalUrl || 'Unknown')}</div>
+                    </div>
+                    <div class="portal-detail">
+                        <label>Captured HTML</label>
+                        <div class="value">${selectedNetwork.portalHtml ? selectedNetwork.portalHtml.length + ' bytes' : 'Not captured'}</div>
+                    </div>
+                    <div class="portal-detail">
+                        <label>Status</label>
+                        <div class="value" style="color: var(--accent-cyan)">${selectedNetwork.analyzed ? 'ANALYZED' : 'PENDING'}</div>
+                    </div>
+                `;
+            } else if (selectedNetwork.isOpen) {
+                document.getElementById('btn-analyze').disabled = false;
+                document.getElementById('btn-enum').disabled = true;
+                document.getElementById('btn-llm').disabled = true;
+
+                details.innerHTML = `
+                    <div class="portal-detail">
+                        <label>SSID</label>
+                        <div class="value">${escapeHtml(selectedNetwork.ssid)}</div>
+                    </div>
+                    <div class="portal-detail">
+                        <label>Status</label>
+                        <div class="value" style="color: var(--accent-warning)">OPEN - Check for portal</div>
+                    </div>
+                `;
+            } else {
+                document.getElementById('btn-analyze').disabled = true;
+                document.getElementById('btn-enum').disabled = true;
+                document.getElementById('btn-llm').disabled = true;
+
+                details.innerHTML = `
+                    <div class="portal-detail">
+                        <label>SSID</label>
+                        <div class="value">${escapeHtml(selectedNetwork.ssid)}</div>
+                    </div>
+                    <div class="portal-detail">
+                        <label>Status</label>
+                        <div class="value" style="color: var(--text-dim)">SECURED - Cannot analyze</div>
+                    </div>
+                `;
+            }
+        }
+
+        async function analyzePortal() {
+            if (!selectedNetwork) return;
+
+            log(`Analyzing portal: ${selectedNetwork.ssid}...`, 'info');
+            document.getElementById('btn-analyze').disabled = true;
+            document.getElementById('btn-analyze').textContent = 'ANALYZING...';
+
+            const result = await fetchAPI(`analyze?ssid=${encodeURIComponent(selectedNetwork.ssid)}`);
+
+            if (result && result.success) {
+                selectedNetwork.hasPortal = true;
+                selectedNetwork.portalUrl = result.portalUrl;
+                selectedNetwork.portalHtml = result.portalHtml;
+                log(`Portal captured: ${result.portalUrl}`, 'success');
+                selectNetwork(networks.indexOf(selectedNetwork));
+            } else {
+                log('Analysis failed or no portal detected', 'warn');
+            }
+
+            document.getElementById('btn-analyze').disabled = false;
+            document.getElementById('btn-analyze').textContent = 'ANALYZE';
+        }
+
+        async function startEnumeration() {
+            if (!selectedNetwork || !selectedNetwork.hasPortal) return;
+
+            const maxAttempts = parseInt(document.getElementById('max-attempts').value) || 50;
+            log(`Starting enumeration (max ${maxAttempts} attempts)...`, 'info');
+
+            document.getElementById('btn-enum').disabled = true;
+            document.getElementById('enum-progress').style.display = 'block';
+            document.getElementById('enum-results').innerHTML = '';
+
+            // Poll for progress
+            const pollProgress = setInterval(async () => {
+                const progress = await fetchAPI('enum/progress');
+                if (progress) {
+                    const pct = (progress.current / progress.total * 100).toFixed(0);
+                    document.getElementById('enum-progress-fill').style.width = pct + '%';
+                    document.getElementById('enum-progress-text').textContent =
+                        `${progress.current} / ${progress.total} - ${progress.status}`;
+
+                    if (progress.complete) {
+                        clearInterval(pollProgress);
+                    }
+                }
+            }, 500);
+
+            const result = await fetchAPI(`enumerate?ssid=${encodeURIComponent(selectedNetwork.ssid)}&max=${maxAttempts}`);
+
+            clearInterval(pollProgress);
+            document.getElementById('btn-enum').disabled = false;
+
+            if (result) {
+                document.getElementById('enum-progress-fill').style.width = '100%';
+                log(`Enumeration complete: ${result.successfulAttempts}/${result.totalAttempts} successful`, 'success');
+
+                const resultsDiv = document.getElementById('enum-results');
+                resultsDiv.innerHTML = `
+                    <div class="portal-detail">
+                        <label>Results</label>
+                        <div class="value">${result.successfulAttempts} valid / ${result.totalAttempts} attempts</div>
+                    </div>
+                    <div class="portal-detail">
+                        <label>Estimated Rooms</label>
+                        <div class="value">${result.estimatedRoomCount || 'Unknown'}</div>
+                    </div>
+                    <div class="portal-detail">
+                        <label>Insights</label>
+                        <div class="value">${escapeHtml(result.venueInsights || 'No insights')}</div>
+                    </div>
+                `;
+
+                if (result.successes && result.successes.length > 0) {
+                    resultsDiv.innerHTML += '<div class="portal-detail"><label>Valid Combinations</label></div>';
+                    result.successes.slice(0, 10).forEach(s => {
+                        resultsDiv.innerHTML += `<div class="enum-result success">${escapeHtml(s.fieldValues)}</div>`;
+                    });
+                }
+            }
+        }
+
+        async function runLLM() {
+            if (!selectedNetwork || !selectedNetwork.hasPortal) return;
+
+            log('Running LLM analysis...', 'info');
+            document.getElementById('btn-llm').disabled = true;
+            document.getElementById('btn-llm').textContent = 'RUNNING...';
+            document.getElementById('llm-output').innerHTML = '<p>Processing with on-device LLM...</p>';
+
+            const result = await fetchAPI(`llm?ssid=${encodeURIComponent(selectedNetwork.ssid)}`);
+
+            if (result && result.success) {
+                document.getElementById('llm-output').innerHTML = `
+                    <div class="portal-detail">
+                        <label>Venue Type</label>
+                        <div class="value">${escapeHtml(result.venueType || 'Unknown')}</div>
+                    </div>
+                    <div class="portal-detail">
+                        <label>Venue Name</label>
+                        <div class="value">${escapeHtml(result.venueName || 'Unknown')}</div>
+                    </div>
+                    <div class="portal-detail">
+                        <label>Form Fields</label>
+                        <div class="value">${(result.formFields || []).join(', ') || 'None detected'}</div>
+                    </div>
+                    <div class="portal-detail">
+                        <label>Analysis</label>
+                        <div class="value">${escapeHtml(result.analysis || 'No analysis available')}</div>
+                    </div>
+                `;
+                log('LLM analysis complete', 'success');
+            } else {
+                log('LLM analysis failed', 'error');
+                document.getElementById('llm-output').innerHTML = '<p style="color: var(--accent-error)">Analysis failed</p>';
+            }
+
+            document.getElementById('btn-llm').disabled = false;
+            document.getElementById('btn-llm').textContent = 'RUN LLM';
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        // Initial status
+        document.getElementById('status-wifi').className = 'status-dot online';
+        document.getElementById('status-wifi-text').textContent = 'READY';
+        document.getElementById('status-power').className = 'status-dot online';
+
+        // Auto-refresh networks every 10s
+        setInterval(async () => {
+            const data = await fetchAPI('status');
+            if (data) {
+                if (data.networks) {
+                    networks = data.networks;
+                    updateNetworkList();
+                }
+            }
+        }, 10000);
+
+        log('Web interface loaded', 'success');
+        log('Waiting for scan...', 'info');
+    </script>
+</body>
+</html>
