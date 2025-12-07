@@ -773,9 +773,12 @@ def upload_firmware(hardware, port=None):
 def upload_filesystem(hardware, selected_port=None):
     """Upload SPIFFS filesystem"""
     env = hardware['env']
+    print()  # Ensure clean line
+    sys.stdout.flush()  # Force output
 
     while True:
         section("UPLOADING WEB FILES")
+        sys.stdout.flush()  # Force output
 
         # Ask user to select port
         selected_port = select_serial_port()

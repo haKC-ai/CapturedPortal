@@ -75,7 +75,7 @@
 
 #define WEB_SERVER_ENABLED true
 #define WEB_SERVER_ON_BATTERY true  // Set true to enable web server on battery (uses more power)
-#define AP_SSID_PREFIX "haKC"
+#define AP_SSID_PREFIX "haKC.ai_Captured_Portal"
 #define AP_HIDDEN false  // Set true to hide SSID (won't broadcast network name)
 #define AP_PASSWORD ""  // Open by default, set for security
 #define WEB_SERVER_PORT 80

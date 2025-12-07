@@ -28,6 +28,7 @@ private:
     static void handleLLM(AsyncWebServerRequest* request);
     static void handleNetworks(AsyncWebServerRequest* request);
     static void handleScreenshot(AsyncWebServerRequest* request);
+    static void handleTestPortal(AsyncWebServerRequest* request);  // Debug: inject test portal
     static void handleNotFound(AsyncWebServerRequest* request);
 
     // Utility

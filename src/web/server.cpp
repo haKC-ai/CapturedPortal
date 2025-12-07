@@ -6,6 +6,7 @@
 #include <WiFi.h>
 #include <SPIFFS.h>
 #include <ArduinoJson.h>
+#include <HTTPClient.h>
 
 // Static member initialization
 AsyncWebServer WebServer::server(WEB_SERVER_PORT);
@@ -44,6 +45,9 @@ void WebServer::init() {
     server.on("/api/enum/progress", HTTP_GET, handleEnumProgress);
     server.on("/api/llm", HTTP_GET, handleLLM);
     server.on("/api/screenshot", HTTP_GET, handleScreenshot);
+
+    // Debug endpoints for testing
+    server.on("/api/debug/testportal", HTTP_GET, handleTestPortal);
 
     // Fallback
     server.onNotFound(handleNotFound);
@@ -556,6 +560,161 @@ void WebServer::handleScreenshot(AsyncWebServerRequest* request) {
 
 void WebServer::handleNotFound(AsyncWebServerRequest* request) {
     request->send(404, "application/json", "{\"error\":\"Not found\"}");
+}
+
+void WebServer::handleTestPortal(AsyncWebServerRequest* request) {
+    // Debug endpoint to inject a fake test portal for testing enumeration
+    // Usage: /api/debug/testportal?url=http://192.168.4.2:8080&ssid=TestPortal&type=hotel
+
+    String portalUrl = "http://192.168.4.2:8080";  // Default test_portal.py URL
+    String fakeSsid = "TestPortal_DEBUG";
+    String portalType = "hotel";
+
+    if (request->hasParam("url")) {
+        portalUrl = request->getParam("url")->value();
+    }
+    if (request->hasParam("ssid")) {
+        fakeSsid = request->getParam("ssid")->value();
+    }
+    if (request->hasParam("type")) {
+        portalType = request->getParam("type")->value();
+    }
+
+    #if DEBUG_SERIAL
+    Serial.printf("[DEBUG] Injecting test portal: %s (SSID: %s, Type: %s)\n",
+        portalUrl.c_str(), fakeSsid.c_str(), portalType.c_str());
+    #endif
+
+    // Fetch the HTML from the test portal server
+    HTTPClient http;
+    WiFiClient client;
+    String portalHtml = "";
+
+    http.begin(client, portalUrl);
+    http.setTimeout(5000);
+    int httpCode = http.GET();
+
+    if (httpCode == HTTP_CODE_OK) {
+        portalHtml = http.getString();
+        #if DEBUG_SERIAL
+        Serial.printf("[DEBUG] Fetched %d bytes from test portal\n", portalHtml.length());
+        #endif
+    } else {
+        #if DEBUG_SERIAL
+        Serial.printf("[DEBUG] Failed to fetch test portal: %d\n", httpCode);
+        #endif
+
+        // Use sample HTML if fetch fails
+        if (portalType == "hotel") {
+            portalHtml = R"(
+<!DOCTYPE html>
+<html><head><title>Hotel WiFi Login</title></head>
+<body>
+<h1>Welcome to Test Hotel</h1>
+<form method="post" action="/login">
+    <label>Room Number:</label>
+    <input type="text" name="room" placeholder="e.g. 101">
+    <label>Last Name:</label>
+    <input type="text" name="lastname" placeholder="Guest surname">
+    <button type="submit">Connect</button>
+</form>
+</body></html>
+)";
+        } else if (portalType == "airport") {
+            portalHtml = R"(
+<!DOCTYPE html>
+<html><head><title>Airport WiFi</title></head>
+<body>
+<h1>Airport Free WiFi</h1>
+<form method="post" action="/login">
+    <label>Email:</label>
+    <input type="email" name="email" placeholder="your@email.com">
+    <label>Flight Number:</label>
+    <input type="text" name="flight" placeholder="e.g. AA123">
+    <button type="submit">Connect</button>
+</form>
+</body></html>
+)";
+        } else {
+            portalHtml = R"(
+<!DOCTYPE html>
+<html><head><title>WiFi Login</title></head>
+<body>
+<h1>Guest WiFi Access</h1>
+<form method="post" action="/login">
+    <label>Access Code:</label>
+    <input type="text" name="code" placeholder="Enter code">
+    <button type="submit">Connect</button>
+</form>
+</body></html>
+)";
+        }
+    }
+    http.end();
+
+    // Create a fake NetworkInfo entry
+    NetworkInfo fakeNet;
+    fakeNet.ssid = fakeSsid;
+    fakeNet.bssid = "DE:AD:BE:EF:00:01";  // Fake BSSID
+    fakeNet.rssi = -50;  // Good signal
+    fakeNet.channel = 6;
+    fakeNet.encryption = WIFI_AUTH_OPEN;
+    fakeNet.isOpen = true;
+    fakeNet.hasPortal = true;
+    fakeNet.analyzed = false;
+    fakeNet.portalUrl = portalUrl;
+    fakeNet.portalHtml = portalHtml;
+    fakeNet.lastSeen = millis();
+
+    // Check if we already have this test network (by SSID)
+    auto& networks = Scanner::getNetworks();
+    auto& portals = Scanner::getPortals();
+    bool found = false;
+
+    for (size_t i = 0; i < networks.size(); i++) {
+        if (networks[i].ssid == fakeSsid) {
+            // Update existing entry
+            networks[i] = fakeNet;
+            found = true;
+
+            // Update portals list pointer
+            for (size_t j = 0; j < portals.size(); j++) {
+                if (portals[j]->ssid == fakeSsid) {
+                    portals[j] = &networks[i];
+                    break;
+                }
+            }
+            if (portals.empty() || portals.back()->ssid != fakeSsid) {
+                portals.push_back(&networks[i]);
+            }
+            break;
+        }
+    }
+
+    if (!found) {
+        // Add new entry
+        networks.push_back(fakeNet);
+        portals.push_back(&networks.back());
+    }
+
+    #if DEBUG_SERIAL
+    Serial.printf("[DEBUG] Test portal injected. Networks: %d, Portals: %d\n",
+        networks.size(), portals.size());
+    #endif
+
+    // Return success response
+    JsonDocument doc;
+    doc["success"] = true;
+    doc["message"] = "Test portal injected";
+    doc["ssid"] = fakeSsid;
+    doc["portalUrl"] = portalUrl;
+    doc["htmlLength"] = portalHtml.length();
+    doc["networkCount"] = networks.size();
+    doc["portalCount"] = portals.size();
+
+    String response;
+    serializeJson(doc, response);
+    request->send(200, "application/json", response);
 }
 
 String WebServer::getContentType(const String& filename) {
