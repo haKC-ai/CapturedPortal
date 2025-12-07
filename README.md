@@ -157,6 +157,8 @@ stateDiagram-v2
 3. Tests combinations based on detected field types
 4. Logs successful combinations
 5. Estimates venue size from valid room numbers
+   
+[![Captured Portal](img/lists.png)](https://github.com/haKC-ai/CapturedPortal)
 
 ### LLM Analysis (USB Mode)
 
