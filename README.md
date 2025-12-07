@@ -1,24 +1,7 @@
-```
-                ██████████
-                █▓       ░██
-                █▒        ██ T H E   P I N A C L E  O F  H A K C I N G   Q U A L I T Y
-    █████████████░        █████████████████ ████████████ ████████████      ████████████
-   ██         ███░        ███▓▒▒▒▒▒▒▒▒▒▒▒██ █▒▒▒▒▒▒▒▒▓████        █████████▓          ▒█
-   ██         ███         ███▒▒▒▒▒▒▒▒▒▒▒▒▓██████████████▓        ███▓▒      ▒▓░       ▒█
-   ██         ███        ░██▓▒▒▒▒▒▒▒▒▒▒▒▒▒▓██▓▒▒▒▒▒▒▒▒█▓        ███░       ░██░       ▒█
-   ██         ███        ▒██▓▒▒▒▒▒▒▒▒▒▒▒▒▒▒██▓▒▒▒▒▒▒▒▓▒        ██  ▓        ██░       ▓█
-   ██         ██▓        ███▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒█▓▒▒▒▒▒▒▒▓▒       ██   █        ██░       ▓
-   ██         ██▒        ██▓▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▓▓▒▒▒▒▒▒▒▓▒      ██    █        ▓█████████
-   ██                    ██▒▒▒▒▒▒▒▒█▓▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▓▒   ▒███████ █░       ░▓        █
-   ██         ░░         ██▒▒▒▒▒▒▒▒██▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▓█ ▓        ░█ ▓       ░▒       ░█
-   ██         ██░       ░█▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▓█ █░        ▒ █                ░█
-   ██         ██        ▓█▒▒▒▒▒▒▒▒▒██▓▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▓█ █░        ▒ █░               ▒█
-    ██████████  ███████████▓██▓▓█▓█  █▓▒▒▒▒▒▒▒▒▒▓██▓██   █▓▓▓▓▓▓▓█    █▓▓▓▓▓▓▓▓▓▓▓▓▓▓██
-  .:/====================█▓██▓██=========████▓█▓█ ███======> [ P R E S E N T S ] ====\:.
-                           ██▓██           █▓▓▓██ ██   ┏┓┏┓┏┓┏┳┓┳┳┳┓┏┓┳┓  ┏┓┏┓┳┓┏┳┓┏┓┓
-                             █▓█            ██▓██      ┃ ┣┫┃┃ ┃ ┃┃┣┫┣ ┃┃  ┃┃┃┃┣┫ ┃ ┣┫┃
-                              ██              ███      ┗┛┛┗┣┛ ┻ ┗┛┛┗┗┛┻┛  ┣┛┗┛┛┗ ┻ ┛┗┗┛
-```
+
+[![Captured Portal](img/logoish.png)](https://github.com/haKC-ai/CapturedPortal)
+
+[![Captured Portal](img/CapturedPortal.png)](https://github.com/haKC-ai/CapturedPortal)
 
 
 # Captured Portal
@@ -32,7 +15,7 @@
 [![Authorization Required](https://img.shields.io/badge/Authorization-Required-red.svg)](USAGE_GUIDELINES.md)
 [![Ethical Use](https://img.shields.io/badge/Ethical-Use%20Only-yellow.svg)](CODE_OF_CONDUCT.md)
 
-An ESP32-based captive portal scanner and analyzer with a hacker aesthetic. Detects captive portals, uses on-device LLM to analyze them, and extracts information about the network/venue.
+An ESP32-based captive portal scanner, enumerator and analyzer. Detects captive portals, uses on-device LLM to analyze them, and extracts information about the network/venue.
 
 ---
 
@@ -67,6 +50,121 @@ By using this software, you accept full responsibility for ensuring your use com
 ---
 
 ## Quick Start
+
+
+https://github.com/user-attachments/assets/918cf3b8-493a-48c7-aa8e-d1a774987bee
+
+## How It Works
+
+### System Architecture
+
+```mermaid
+graph TB
+    subgraph Device["ESP32-S3 Device"]
+        Scanner["WiFi Scanner"]
+        Portal["Portal Detector"]
+        Enum["Enumerator"]
+        LLM["LLM Engine"]
+        UI["Display UI"]
+        Web["Web Server"]
+        Power["Power Manager"]
+    end
+
+    subgraph External["External"]
+        WiFi["Open WiFi Networks"]
+        CP["Captive Portals"]
+        Browser["Web Browser"]
+    end
+
+    WiFi --> Scanner
+    Scanner --> Portal
+    Portal --> CP
+    CP --> Enum
+    CP --> LLM
+    LLM --> UI
+    Enum --> UI
+    Web --> Browser
+    Power --> Scanner
+    Power --> Web
+
+    style Device fill:#1a1a2e,stroke:#0f3460,color:#fff
+    style Scanner fill:#e94560,stroke:#0f3460,color:#fff
+    style Portal fill:#e94560,stroke:#0f3460,color:#fff
+    style LLM fill:#16213e,stroke:#0f3460,color:#fff
+```
+
+### Detection Flow
+
+```mermaid
+sequenceDiagram
+    participant D as Device
+    participant W as WiFi Network
+    participant C as Captive Portal
+    participant L as LLM Engine
+
+    D->>W: Scan for open networks
+    W-->>D: Network list
+    D->>W: Connect to network
+    D->>C: Request connectivity check
+    C-->>D: 302 Redirect
+    D->>D: Portal detected!
+    D->>C: Fetch portal HTML
+    C-->>D: Login page HTML
+    D->>L: Analyze HTML
+    L-->>D: Venue info + fields
+    D->>D: Begin enumeration
+```
+
+### Power Mode States
+
+```mermaid
+stateDiagram-v2
+    [*] --> Boot
+    Boot --> DetectPower
+
+    DetectPower --> BatteryMode: No USB
+    DetectPower --> USBMode: USB Connected
+
+    BatteryMode --> Scanning: Start scan
+    USBMode --> Scanning: Start scan
+
+    Scanning --> PortalFound: Portal detected
+    Scanning --> Idle: No portals
+
+    PortalFound --> Analyzing: USB Mode
+    PortalFound --> Enumerating: Battery Mode
+
+    Analyzing --> Enumerating: Analysis complete
+    Enumerating --> Idle: Complete
+
+    Idle --> DeepSleep: Timeout (battery)
+    Idle --> Scanning: User input
+
+    DeepSleep --> [*]
+```
+
+### Captive Portal Detection
+
+1. Scans for open WiFi networks
+2. Connects and requests `http://connectivitycheck.gstatic.com/generate_204`
+3. If redirected (302) or content differs, it's a captive portal
+4. Captures portal HTML for analysis
+
+### Credential Enumeration
+
+1. Analyzes portal form fields (room number, last name, etc.)
+2. Uses wordlists (`data/wordlists/room_numbers.txt`, `data/wordlists/surnames.txt`)
+3. Tests combinations based on detected field types
+4. Logs successful combinations
+5. Estimates venue size from valid room numbers
+
+### LLM Analysis (USB Mode)
+
+1. Feeds captured HTML to on-device LLM
+2. Extracts: venue name, type, form fields, security issues
+3. Provides enumeration strategy recommendations
+
+---
 
 ### Easy Install (Recommended)
 
@@ -319,117 +417,6 @@ When web server is running:
 
 ---
 
-## How It Works
-
-### System Architecture
-
-```mermaid
-graph TB
-    subgraph Device["ESP32-S3 Device"]
-        Scanner["WiFi Scanner"]
-        Portal["Portal Detector"]
-        Enum["Enumerator"]
-        LLM["LLM Engine"]
-        UI["Display UI"]
-        Web["Web Server"]
-        Power["Power Manager"]
-    end
-
-    subgraph External["External"]
-        WiFi["Open WiFi Networks"]
-        CP["Captive Portals"]
-        Browser["Web Browser"]
-    end
-
-    WiFi --> Scanner
-    Scanner --> Portal
-    Portal --> CP
-    CP --> Enum
-    CP --> LLM
-    LLM --> UI
-    Enum --> UI
-    Web --> Browser
-    Power --> Scanner
-    Power --> Web
-
-    style Device fill:#1a1a2e,stroke:#0f3460,color:#fff
-    style Scanner fill:#e94560,stroke:#0f3460,color:#fff
-    style Portal fill:#e94560,stroke:#0f3460,color:#fff
-    style LLM fill:#16213e,stroke:#0f3460,color:#fff
-```
-
-### Detection Flow
-
-```mermaid
-sequenceDiagram
-    participant D as Device
-    participant W as WiFi Network
-    participant C as Captive Portal
-    participant L as LLM Engine
-
-    D->>W: Scan for open networks
-    W-->>D: Network list
-    D->>W: Connect to network
-    D->>C: Request connectivity check
-    C-->>D: 302 Redirect
-    D->>D: Portal detected!
-    D->>C: Fetch portal HTML
-    C-->>D: Login page HTML
-    D->>L: Analyze HTML
-    L-->>D: Venue info + fields
-    D->>D: Begin enumeration
-```
-
-### Power Mode States
-
-```mermaid
-stateDiagram-v2
-    [*] --> Boot
-    Boot --> DetectPower
-
-    DetectPower --> BatteryMode: No USB
-    DetectPower --> USBMode: USB Connected
-
-    BatteryMode --> Scanning: Start scan
-    USBMode --> Scanning: Start scan
-
-    Scanning --> PortalFound: Portal detected
-    Scanning --> Idle: No portals
-
-    PortalFound --> Analyzing: USB Mode
-    PortalFound --> Enumerating: Battery Mode
-
-    Analyzing --> Enumerating: Analysis complete
-    Enumerating --> Idle: Complete
-
-    Idle --> DeepSleep: Timeout (battery)
-    Idle --> Scanning: User input
-
-    DeepSleep --> [*]
-```
-
-### Captive Portal Detection
-
-1. Scans for open WiFi networks
-2. Connects and requests `http://connectivitycheck.gstatic.com/generate_204`
-3. If redirected (302) or content differs, it's a captive portal
-4. Captures portal HTML for analysis
-
-### Credential Enumeration
-
-1. Analyzes portal form fields (room number, last name, etc.)
-2. Uses wordlists (`data/wordlists/room_numbers.txt`, `data/wordlists/surnames.txt`)
-3. Tests combinations based on detected field types
-4. Logs successful combinations
-5. Estimates venue size from valid room numbers
-
-### LLM Analysis (USB Mode)
-
-1. Feeds captured HTML to on-device LLM
-2. Extracts: venue name, type, form fields, security issues
-3. Provides enumeration strategy recommendations
-
----
 
 ## Project Structure
 
