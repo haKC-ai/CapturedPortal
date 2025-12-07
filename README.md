@@ -1,5 +1,5 @@
 
-[![Captured Portal](img/logoish.png)](https://github.com/haKC-ai/CapturedPortal)
+[![Captured Portal](img/logoish.png)](https://github.com/haKC-ai/CapturedPortal/img/logoish.png)
 
 [![Captured Portal](img/CapturedPortal.png)](https://github.com/haKC-ai/CapturedPortal)
 
