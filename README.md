@@ -11,8 +11,10 @@
   <a href="https://www.espressif.com/en/products/socs/esp32-s3"><img src="https://img.shields.io/badge/Hardware-ESP32--S3-red.svg" alt="ESP32"></a>
 </p>
 
-An ESP32-based captive portal scanner and credential enumerator. Automatically detects hotel/venue WiFi captive portals, analyzes login forms to identify field types (room number, last name, access codes), then brute-forces valid combinations using built-in wordlists. Logs all successful credentials discovered.
+An ESP32-based captive portal scanner and credential enumerator. Automatically detects hotel style WiFi captive portals, analyzes login forms to identify field types (room number, last name, access codes), then brute-forces valid combinations using built-in wordlists. Includes an interactive build system with automatic hardware detection, one-command flashing, and a test portal server for development.
+
 ---
+
 ## How it works
 
 ```mermaid
