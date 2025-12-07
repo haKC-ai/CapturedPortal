@@ -1,7 +1,7 @@
 
-[![Captured Portal](img/logoish.png)](https://github.com/haKC-ai/CapturedPortal/img/logoish.png)
+[![Captured Portal](img/logoish.png)](https://github.com/haKC-ai/CapturedPortal/blob/main/img/logoish.png?raw=true)
 
-[![Captured Portal](img/CapturedPortal.png)](https://github.com/haKC-ai/CapturedPortal)
+[![Captured Portal](img/CapturedPortal.png)]([https://github.com/haKC-ai/CapturedPortal](https://github.com/haKC-ai/CapturedPortal/blob/main/img/CapturedPortal.png?raw=true))
 
 
 # Captured Portal
