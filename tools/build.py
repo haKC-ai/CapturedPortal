@@ -86,17 +86,17 @@ def show_banner(theme=None, effect=None, randomize=True):
     """Display the banner with hakcer effects if available"""
     clear_screen()
 
+    # Change to project dir for relative banner path
+    original_dir = os.getcwd()
+    os.chdir(PROJECT_DIR)
+
     if HAKCER_AVAILABLE:
         try:
-            # Use random theme/effect if not specified and randomize is True
-            use_theme = theme if theme else (random_theme() if randomize else "matrix")
-            use_effect = effect if effect else (random_effect() if randomize else "decrypt")
-
+            # Use unstable effect for the haKC aesthetic
             hakcer.show_banner(
-                custom_file=str(BANNER_FILE),
-                effect_name=use_effect,
-                theme=use_theme,
-                speed_preference="fast",
+                custom_file="banner",
+                effect_name="unstable",
+                theme="synthwave",
                 hold_time=1.0
             )
         except Exception:
@@ -104,6 +104,8 @@ def show_banner(theme=None, effect=None, randomize=True):
             print(f"{Colors.GREEN}{load_banner()}{Colors.RESET}")
     else:
         print(f"{Colors.GREEN}{load_banner()}{Colors.RESET}")
+
+    os.chdir(original_dir)
 
 
 def hakcer_print(text, theme=None, effect="typewriter", speed="fast"):
@@ -334,6 +336,7 @@ def configure_advanced():
 
 def generate_config(hardware, color_scheme, network, advanced):
     """Generate the config.h file"""
+    import re
     section("GENERATING CONFIGURATION")
 
     if not CONFIG_FILE.exists():
@@ -343,28 +346,31 @@ def generate_config(hardware, color_scheme, network, advanced):
     # Read template
     config = CONFIG_FILE.read_text()
 
-    # Apply settings
-    replacements = {
-        '#define COLOR_SCHEME COLOR_MATRIX': f'#define COLOR_SCHEME {color_scheme["value"]}',
-        '#define AP_SSID_PREFIX "CapturedPortal_"': f'#define AP_SSID_PREFIX "{network["ssid_prefix"]}"',
-        '#define AP_HIDDEN false': f'#define AP_HIDDEN {"true" if network.get("hidden_ssid", False) else "false"}',
-        '#define AP_PASSWORD ""': f'#define AP_PASSWORD "{network["password"]}"',
-        '#define WEB_SERVER_ON_BATTERY false': f'#define WEB_SERVER_ON_BATTERY {"true" if network["web_on_battery"] else "false"}',
-        '#define BATTERY_SCAN_INTERVAL 10000': f'#define BATTERY_SCAN_INTERVAL {advanced["battery_scan_interval"]}',
-        '#define USB_SCAN_INTERVAL 3000': f'#define USB_SCAN_INTERVAL {advanced["usb_scan_interval"]}',
-        '#define IDLE_SLEEP_TIMEOUT 60000': f'#define IDLE_SLEEP_TIMEOUT {advanced["idle_sleep"]}',
-        '#define DEEP_SLEEP_TIMEOUT 300000': f'#define DEEP_SLEEP_TIMEOUT {advanced["deep_sleep"]}',
-        '#define LLM_ENABLED true': f'#define LLM_ENABLED {"true" if advanced["llm_enabled"] else "false"}',
-        '#define LLM_ON_BATTERY false': f'#define LLM_ON_BATTERY {"true" if advanced.get("llm_on_battery", False) else "false"}'
-    }
+    # Use regex for robust replacements (matches any current value)
+    regex_replacements = [
+        (r'#define COLOR_SCHEME \w+', f'#define COLOR_SCHEME {color_scheme["value"]}'),
+        (r'#define AP_SSID_PREFIX "[^"]*"', f'#define AP_SSID_PREFIX "{network["ssid_prefix"]}"'),
+        (r'#define AP_HIDDEN (true|false)', f'#define AP_HIDDEN {"true" if network.get("hidden_ssid", False) else "false"}'),
+        (r'#define AP_PASSWORD "[^"]*"', f'#define AP_PASSWORD "{network["password"]}"'),
+        (r'#define WEB_SERVER_ON_BATTERY (true|false)', f'#define WEB_SERVER_ON_BATTERY {"true" if network["web_on_battery"] else "false"}'),
+        (r'#define BATTERY_SCAN_INTERVAL \d+', f'#define BATTERY_SCAN_INTERVAL {advanced["battery_scan_interval"]}'),
+        (r'#define USB_SCAN_INTERVAL \d+', f'#define USB_SCAN_INTERVAL {advanced["usb_scan_interval"]}'),
+        (r'#define IDLE_SLEEP_TIMEOUT \d+', f'#define IDLE_SLEEP_TIMEOUT {advanced["idle_sleep"]}'),
+        (r'#define DEEP_SLEEP_TIMEOUT \d+', f'#define DEEP_SLEEP_TIMEOUT {advanced["deep_sleep"]}'),
+        (r'#define LLM_ENABLED (true|false)', f'#define LLM_ENABLED {"true" if advanced["llm_enabled"] else "false"}'),
+        (r'#define LLM_ON_BATTERY (true|false)', f'#define LLM_ON_BATTERY {"true" if advanced.get("llm_on_battery", False) else "false"}'),
+    ]
 
-    for old, new in replacements.items():
-        config = config.replace(old, new)
+    for pattern, replacement in regex_replacements:
+        config = re.sub(pattern, replacement, config)
 
     # Write config
     CONFIG_FILE.write_text(config)
 
     info(f"Configuration saved to {CONFIG_FILE}")
+    info(f"  Color scheme: {color_scheme['name']}")
+    info(f"  AP SSID: {network['ssid_prefix']}...")
+    info(f"  Password: {'(open)' if not network['password'] else '***'}")
     return True
 
 
@@ -632,6 +638,65 @@ def reset_to_bootloader(port):
         return port
 
 
+def erase_flash(port):
+    """Erase ESP32 flash completely using esptool"""
+    if not port:
+        error("No port specified for erase")
+        return False
+
+    section("ERASING FLASH")
+    warn("This will completely wipe the device!")
+    print(f"{Colors.DIM}Hold BOOT button while pressing RESET if device doesn't respond{Colors.RESET}")
+
+    if not prompt_yes_no("Proceed with flash erase?", True):
+        return False
+
+    info(f"Erasing flash on {port}...")
+    print(f"{Colors.DIM}This may take 10-30 seconds...{Colors.RESET}")
+    print()
+
+    # Try esptool as Python module first
+    try:
+        result = subprocess.run(
+            ['python3', '-m', 'esptool', '--port', port, '--chip', 'esp32s3', 'erase_flash'],
+            cwd=PROJECT_DIR,
+            timeout=60
+        )
+        if result.returncode == 0:
+            success_animation("Flash erased successfully!")
+            info("Device is now blank - ready for fresh upload")
+            # Wait for device to reboot after erase
+            time.sleep(2)
+            return True
+    except subprocess.TimeoutExpired:
+        error("Erase timed out")
+    except FileNotFoundError:
+        pass
+    except Exception as e:
+        warn(f"esptool module failed: {e}")
+
+    # Try esptool.py directly
+    try:
+        result = subprocess.run(
+            ['esptool.py', '--port', port, '--chip', 'esp32s3', 'erase_flash'],
+            cwd=PROJECT_DIR,
+            timeout=60
+        )
+        if result.returncode == 0:
+            success_animation("Flash erased successfully!")
+            info("Device is now blank - ready for fresh upload")
+            time.sleep(2)
+            return True
+    except subprocess.TimeoutExpired:
+        error("Erase timed out")
+    except FileNotFoundError:
+        error("esptool not found - install with: pip install esptool")
+    except Exception as e:
+        error(f"Erase failed: {e}")
+
+    return False
+
+
 def upload_firmware(hardware, port=None):
     """Upload firmware to device"""
     env = hardware['env']
@@ -679,13 +744,22 @@ def upload_firmware(hardware, port=None):
             print()
             print(f"{Colors.CYAN}Options:{Colors.RESET}")
             print(f"  {Colors.GREEN}[R]{Colors.RESET} Retry with port re-detection")
+            print(f"  {Colors.GREEN}[E]{Colors.RESET} Erase flash first (fixes stuck devices)")
             print(f"  {Colors.GREEN}[S]{Colors.RESET} Skip upload")
             print(f"  {Colors.GREEN}[Q]{Colors.RESET} Quit")
 
             while True:
-                choice = input(f"\n{Colors.YELLOW}Choose [R/S/Q]:{Colors.RESET} ").strip().upper()
+                choice = input(f"\n{Colors.YELLOW}Choose [R/E/S/Q]:{Colors.RESET} ").strip().upper()
                 if choice == 'R' or choice == '':
                     break  # Retry loop
+                elif choice == 'E':
+                    # Erase flash then retry
+                    erase_port = select_serial_port()
+                    if erase_port and erase_port is not False:
+                        if erase_flash(erase_port):
+                            info("Flash erased - retrying upload...")
+                            break  # Retry upload
+                    continue
                 elif choice == 'S':
                     warn("Skipping firmware upload.")
                     return False
@@ -911,6 +985,39 @@ def menu_test_portal():
         print(f"\n{Colors.YELLOW}[!] Server stopped{Colors.RESET}")
 
 
+def menu_serial_monitor():
+    """Serial monitor for debugging"""
+    show_banner()
+
+    section("SERIAL MONITOR")
+
+    selected_port = select_serial_port()
+    if selected_port is False or selected_port is None:
+        return
+
+    baud = prompt("Baud rate", "115200")
+
+    info(f"Opening serial monitor on {selected_port} at {baud} baud...")
+    print(f"{Colors.DIM}Press Ctrl+C to exit{Colors.RESET}\n")
+    print(f"{Colors.CYAN}{'─' * 60}{Colors.RESET}")
+
+    try:
+        # Use PlatformIO's device monitor
+        subprocess.run(
+            ['pio', 'device', 'monitor', '-p', selected_port, '-b', baud],
+            cwd=PROJECT_DIR
+        )
+    except KeyboardInterrupt:
+        print(f"\n{Colors.YELLOW}[!] Monitor closed{Colors.RESET}")
+    except FileNotFoundError:
+        # Fallback to screen or minicom
+        warn("PlatformIO monitor not available, trying screen...")
+        try:
+            subprocess.run(['screen', selected_port, baud])
+        except FileNotFoundError:
+            error("No serial monitor available. Install PlatformIO or screen.")
+
+
 def main_menu():
     """Main menu"""
     while True:
@@ -941,6 +1048,9 @@ def main_menu():
         print(f"  {Colors.CYAN}[2]{Colors.RESET} {Colors.BOLD}Start Test Portal{Colors.RESET}")
         print(f"      {Colors.DIM}Run a fake captive portal for testing{Colors.RESET}\n")
 
+        print(f"  {Colors.CYAN}[3]{Colors.RESET} {Colors.BOLD}Serial Monitor{Colors.RESET}")
+        print(f"      {Colors.DIM}View device debug output (troubleshooting){Colors.RESET}\n")
+
         print(f"  {Colors.CYAN}[q]{Colors.RESET} {Colors.BOLD}Quit{Colors.RESET}\n")
 
         # Show hakcer status
@@ -957,6 +1067,9 @@ def main_menu():
             input(f"\n{Colors.DIM}Press Enter to continue...{Colors.RESET}")
         elif choice == "2":
             menu_test_portal()
+            input(f"\n{Colors.DIM}Press Enter to continue...{Colors.RESET}")
+        elif choice == "3":
+            menu_serial_monitor()
             input(f"\n{Colors.DIM}Press Enter to continue...{Colors.RESET}")
         elif choice.lower() == "q":
             print(f"\n{Colors.GREEN}Goodbye!{Colors.RESET}\n")

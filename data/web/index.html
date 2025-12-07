@@ -4,6 +4,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>CAPTURED PORTAL</title>
+    <!-- Retro terminal fonts - VT323 (CRT terminal), Press Start 2P (8-bit), Share Tech Mono -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=VT323&family=Share+Tech+Mono&family=IBM+Plex+Mono:wght@400;700&display=swap" rel="stylesheet">
     <style>
         :root {
             --bg-primary: #0a0a0f;
@@ -26,7 +30,8 @@
         }
 
         body {
-            font-family: 'Courier New', 'Monaco', monospace;
+            font-family: 'Share Tech Mono', 'IBM Plex Mono', 'Courier New', monospace;
+            font-size: 14px;
             background-color: var(--bg-primary);
             color: var(--text-primary);
             min-height: 100vh;
@@ -72,13 +77,13 @@
         }
 
         .logo {
-            font-size: 1rem;
-            font-weight: bold;
+            font-size: 12px;
+            font-weight: normal;
             text-shadow: 0 0 10px var(--text-primary);
             letter-spacing: 0;
             white-space: pre;
-            line-height: 1.1;
-            font-family: 'Consolas', 'Monaco', 'Lucida Console', 'Liberation Mono', 'DejaVu Sans Mono', monospace;
+            line-height: 1.0;
+            font-family: 'Courier New', 'Monaco', 'Consolas', monospace;
             text-align: left;
             margin: 0;
         }
@@ -318,10 +323,10 @@
             background: var(--bg-primary);
             border: 1px solid var(--border-color);
             padding: 1rem;
-            font-size: 0.8rem;
+            font-size: 13px;
             height: 200px;
             overflow-y: auto;
-            font-family: 'Courier New', monospace;
+            font-family: 'Share Tech Mono', 'Courier New', monospace;
         }
 
         .log-line {
@@ -353,8 +358,9 @@
         }
 
         .stat-value {
-            font-size: 2rem;
+            font-size: 2.5rem;
             font-weight: bold;
+            font-family: 'VT323', 'Courier New', monospace;
             text-shadow: 0 0 10px currentColor;
         }
 
@@ -420,6 +426,33 @@
 
         .enum-result.success {
             border-left-color: var(--accent-cyan);
+        }
+
+        /* CRT phosphor glow effect */
+        .card-title, .stat-value, .network-ssid, .btn {
+            text-shadow: 0 0 8px currentColor, 0 0 2px currentColor;
+        }
+
+        /* Retro terminal blink effect for important elements */
+        .status-wifi-text, .log-success {
+            animation: crt-flicker 0.15s infinite alternate;
+        }
+
+        @keyframes crt-flicker {
+            0% { opacity: 0.97; }
+            100% { opacity: 1; }
+        }
+
+        /* Slight CRT curve effect on cards */
+        .card {
+            box-shadow:
+                inset 0 0 60px rgba(0, 255, 65, 0.03),
+                0 0 20px rgba(0, 255, 65, 0.1);
+        }
+
+        /* Retro button hover with phosphor burn-in effect */
+        .btn:hover {
+            text-shadow: 0 0 15px currentColor, 0 0 30px currentColor;
         }
     </style>
 </head>

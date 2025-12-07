@@ -2,6 +2,7 @@
 #include "config.h"
 #include "core/scanner.h"
 #include "core/enumerator.h"
+#include "display/ui.h"
 #include <WiFi.h>
 #include <SPIFFS.h>
 #include <ArduinoJson.h>
@@ -42,6 +43,7 @@ void WebServer::init() {
     server.on("/api/enumerate", HTTP_GET, handleEnumerate);
     server.on("/api/enum/progress", HTTP_GET, handleEnumProgress);
     server.on("/api/llm", HTTP_GET, handleLLM);
+    server.on("/api/screenshot", HTTP_GET, handleScreenshot);
 
     // Fallback
     server.onNotFound(handleNotFound);
@@ -64,22 +66,46 @@ void WebServer::setupAP() {
     apSSID = String(AP_SSID_PREFIX) + String(mac[4], HEX) + String(mac[5], HEX);
     apSSID.toUpperCase();
 
-    // Start AP
+    #if DEBUG_SERIAL
+    Serial.println("[WEB] Setting up Access Point...");
+    Serial.printf("[WEB] SSID: %s\n", apSSID.c_str());
+    Serial.printf("[WEB] Password: %s\n", strlen(AP_PASSWORD) > 0 ? AP_PASSWORD : "(open)");
+    Serial.printf("[WEB] Hidden: %s\n", AP_HIDDEN ? "yes" : "no");
+    #endif
+
+    // Start AP - Set mode first
     WiFi.mode(WIFI_AP_STA);  // AP + Station mode for scanning
+    delay(100);  // Give WiFi time to switch modes
 
     // softAP params: ssid, password, channel, hidden, max_connection
+    // Use channel 6 (less crowded than 1)
+    bool apStarted;
     if (strlen(AP_PASSWORD) > 0) {
-        WiFi.softAP(apSSID.c_str(), AP_PASSWORD, 1, AP_HIDDEN, 4);
+        apStarted = WiFi.softAP(apSSID.c_str(), AP_PASSWORD, 6, AP_HIDDEN, 4);
     } else {
-        WiFi.softAP(apSSID.c_str(), NULL, 1, AP_HIDDEN, 4);
+        apStarted = WiFi.softAP(apSSID.c_str(), NULL, 6, AP_HIDDEN, 4);
     }
 
-    apIP = WiFi.softAPIP().toString();
-
     #if DEBUG_SERIAL
-    Serial.printf("[WEB] AP started: %s\n", apSSID.c_str());
-    Serial.printf("[WEB] AP IP: %s\n", apIP.c_str());
+    Serial.printf("[WEB] softAP() returned: %s\n", apStarted ? "SUCCESS" : "FAILED");
     #endif
+
+    if (apStarted) {
+        delay(100);  // Give AP time to initialize
+        apIP = WiFi.softAPIP().toString();
+
+        #if DEBUG_SERIAL
+        Serial.printf("[WEB] AP started successfully!\n");
+        Serial.printf("[WEB] AP SSID: %s\n", apSSID.c_str());
+        Serial.printf("[WEB] AP IP: %s\n", apIP.c_str());
+        Serial.printf("[WEB] AP MAC: %s\n", WiFi.softAPmacAddress().c_str());
+        #endif
+    } else {
+        #if DEBUG_SERIAL
+        Serial.println("[WEB] ERROR: Failed to start AP!");
+        #endif
+        apIP = "0.0.0.0";
+    }
 }
 
 void WebServer::stop() {
@@ -429,6 +455,103 @@ void WebServer::handleLLM(AsyncWebServerRequest* request) {
     String response;
     serializeJson(doc, response);
     request->send(200, "application/json", response);
+}
+
+void WebServer::handleScreenshot(AsyncWebServerRequest* request) {
+    #if DEBUG_SERIAL
+    Serial.println("[WEB] Screenshot requested");
+    #endif
+
+    TFT_eSPI& tft = UI::getDisplay();
+    int width = tft.width();
+    int height = tft.height();
+
+    // BMP file size calculation
+    // Row size must be padded to 4-byte boundary
+    int rowSize = ((width * 3 + 3) / 4) * 4;
+    int imageSize = rowSize * height;
+    int fileSize = 54 + imageSize;  // 54 byte header + pixel data
+
+    // Allocate buffer for the entire BMP (display is small enough)
+    // 320x240x3 = 230KB + 54 header = ~231KB
+    uint8_t* bmpBuffer = (uint8_t*)ps_malloc(fileSize);
+    if (!bmpBuffer) {
+        // Fallback to regular malloc
+        bmpBuffer = (uint8_t*)malloc(fileSize);
+        if (!bmpBuffer) {
+            request->send(500, "application/json", "{\"error\":\"Out of memory\"}");
+            return;
+        }
+    }
+
+    // BMP File Header (14 bytes)
+    bmpBuffer[0] = 'B';
+    bmpBuffer[1] = 'M';
+    bmpBuffer[2] = fileSize & 0xFF;
+    bmpBuffer[3] = (fileSize >> 8) & 0xFF;
+    bmpBuffer[4] = (fileSize >> 16) & 0xFF;
+    bmpBuffer[5] = (fileSize >> 24) & 0xFF;
+    bmpBuffer[6] = 0; bmpBuffer[7] = 0;  // Reserved
+    bmpBuffer[8] = 0; bmpBuffer[9] = 0;  // Reserved
+    bmpBuffer[10] = 54; bmpBuffer[11] = 0; bmpBuffer[12] = 0; bmpBuffer[13] = 0;  // Pixel offset
+
+    // DIB Header (40 bytes - BITMAPINFOHEADER)
+    bmpBuffer[14] = 40; bmpBuffer[15] = 0; bmpBuffer[16] = 0; bmpBuffer[17] = 0;  // Header size
+    bmpBuffer[18] = width & 0xFF;
+    bmpBuffer[19] = (width >> 8) & 0xFF;
+    bmpBuffer[20] = (width >> 16) & 0xFF;
+    bmpBuffer[21] = (width >> 24) & 0xFF;
+    // Height is negative for top-down bitmap
+    int negHeight = -height;
+    bmpBuffer[22] = negHeight & 0xFF;
+    bmpBuffer[23] = (negHeight >> 8) & 0xFF;
+    bmpBuffer[24] = (negHeight >> 16) & 0xFF;
+    bmpBuffer[25] = (negHeight >> 24) & 0xFF;
+    bmpBuffer[26] = 1; bmpBuffer[27] = 0;   // Color planes
+    bmpBuffer[28] = 24; bmpBuffer[29] = 0;  // Bits per pixel
+    bmpBuffer[30] = 0; bmpBuffer[31] = 0; bmpBuffer[32] = 0; bmpBuffer[33] = 0;  // No compression
+    bmpBuffer[34] = (imageSize) & 0xFF;
+    bmpBuffer[35] = (imageSize >> 8) & 0xFF;
+    bmpBuffer[36] = (imageSize >> 16) & 0xFF;
+    bmpBuffer[37] = (imageSize >> 24) & 0xFF;
+    bmpBuffer[38] = 0x13; bmpBuffer[39] = 0x0B; bmpBuffer[40] = 0; bmpBuffer[41] = 0;  // H res
+    bmpBuffer[42] = 0x13; bmpBuffer[43] = 0x0B; bmpBuffer[44] = 0; bmpBuffer[45] = 0;  // V res
+    bmpBuffer[46] = 0; bmpBuffer[47] = 0; bmpBuffer[48] = 0; bmpBuffer[49] = 0;  // Colors
+    bmpBuffer[50] = 0; bmpBuffer[51] = 0; bmpBuffer[52] = 0; bmpBuffer[53] = 0;  // Important
+
+    // Read pixels from display
+    int bufferPos = 54;
+    for (int y = 0; y < height; y++) {
+        for (int x = 0; x < width; x++) {
+            uint16_t pixel = tft.readPixel(x, y);
+
+            // Convert RGB565 to RGB888 (BGR order for BMP)
+            uint8_t r = ((pixel >> 11) & 0x1F) << 3;
+            uint8_t g = ((pixel >> 5) & 0x3F) << 2;
+            uint8_t b = (pixel & 0x1F) << 3;
+
+            bmpBuffer[bufferPos++] = b;
+            bmpBuffer[bufferPos++] = g;
+            bmpBuffer[bufferPos++] = r;
+        }
+
+        // Pad row to 4-byte boundary
+        int padding = rowSize - (width * 3);
+        for (int p = 0; p < padding; p++) {
+            bmpBuffer[bufferPos++] = 0;
+        }
+    }
+
+    // Send response with the buffer - AsyncWebServer will free it
+    AsyncWebServerResponse* response = request->beginResponse_P(
+        200, "image/bmp", bmpBuffer, fileSize
+    );
+    response->addHeader("Content-Disposition", "inline; filename=\"screenshot.bmp\"");
+    response->addHeader("Cache-Control", "no-cache");
+    request->send(response);
+
+    // Note: bmpBuffer is copied by beginResponse_P, so we can free it
+    free(bmpBuffer);
 }
 
 void WebServer::handleNotFound(AsyncWebServerRequest* request) {

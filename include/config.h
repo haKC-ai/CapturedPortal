@@ -22,7 +22,7 @@
 #define COLOR_CYBERPUNK 2  // Hot pink/yellow
 #define COLOR_DRACULA   3  // Purple theme
 
-#define COLOR_SCHEME COLOR_SYNTHWAVE
+#define COLOR_SCHEME COLOR_MATRIX
 
 // Animation speeds (ms)
 #define ANIMATION_FRAME_DELAY 50
@@ -77,7 +77,7 @@
 #define WEB_SERVER_ON_BATTERY true  // Set true to enable web server on battery (uses more power)
 #define AP_SSID_PREFIX "haKC"
 #define AP_HIDDEN false  // Set true to hide SSID (won't broadcast network name)
-#define AP_PASSWORD "haKCer23"  // Open by default, set for security
+#define AP_PASSWORD ""  // Open by default, set for security
 #define WEB_SERVER_PORT 80
 
 // API rate limiting

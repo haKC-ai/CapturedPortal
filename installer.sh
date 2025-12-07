@@ -23,8 +23,8 @@ REQUIREMENTS="${SCRIPT_DIR}/tools/requirements.txt"
 BUILD_SCRIPT="${SCRIPT_DIR}/tools/build.py"
 BANNER_FILE="${SCRIPT_DIR}/banner"
 
-# Print banner
-print_banner() {
+# Print banner - plain version (before venv)
+print_banner_plain() {
     clear
     if [ -f "$BANNER_FILE" ]; then
         echo -e "${GREEN}"
@@ -38,6 +38,22 @@ print_banner() {
         echo "╚═══════════════════════════════════════╝"
         echo -e "${NC}"
     fi
+    echo
+}
+
+# Print banner using hakcer library (after venv is ready)
+print_banner_hakcer() {
+    clear
+    cd "$SCRIPT_DIR"
+    # Use venv python which has hakcer installed
+    "${VENV_DIR}/bin/python" -c "from hakcer import show_banner; show_banner(custom_file='banner', effect_name='overflow', theme='synthwave', hold_time=1.0)" 2>/dev/null || {
+        # Fallback if hakcer fails
+        if [ -f "$BANNER_FILE" ]; then
+            echo -e "${GREEN}"
+            cat "$BANNER_FILE"
+            echo -e "${NC}"
+        fi
+    }
     echo
 }
 
@@ -169,7 +185,8 @@ run_build() {
 
 # Main
 main() {
-    print_banner
+    # Show plain banner initially (before venv/hakcer available)
+    print_banner_plain
 
     echo -e "${CYAN}════════════════════════════════════════════════════════════${NC}"
     echo -e "${GREEN}  Captured Portal - Installation Script${NC}"
@@ -206,6 +223,9 @@ main() {
     echo
     info "Setup complete!"
     echo
+
+    # Now show the fancy hakcer banner (venv is ready)
+    print_banner_hakcer
 
     # Run build tool
     run_build "$@"

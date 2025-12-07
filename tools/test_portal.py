@@ -421,15 +421,24 @@ def show_banner():
     """Show startup banner"""
     os.system('cls' if os.name == 'nt' else 'clear')
 
+    # Change to the banner directory for relative path
+    original_dir = os.getcwd()
+    os.chdir(BANNER_FILE.parent)
+
     if HAKCER_AVAILABLE:
-        # Use hakcer's show_banner with custom file for full effects
-        hakcer.show_banner(
-            custom_file=str(BANNER_FILE),
-            effect_name="decrypt",
-            theme="synthwave",
-            speed_preference="fast",
-            hold_time=1.0
-        )
+        try:
+            # Use hakcer's show_banner with local banner file
+            hakcer.show_banner(
+                custom_file="banner",
+                effect_name="rain",
+                theme="synthwave",
+                hold_time=1.0
+            )
+        except (AttributeError, TypeError) as e:
+            # Fallback if hakcer API changed
+            print(f"{Colors.YELLOW}[!] hakcer effect failed: {e}{Colors.RESET}")
+            if BANNER_FILE.exists():
+                print(f"{Colors.GREEN}{BANNER_FILE.read_text()}{Colors.RESET}")
     else:
         # Fallback to plain banner
         if BANNER_FILE.exists():
@@ -439,6 +448,7 @@ def show_banner():
             print(f"{Colors.CYAN}║     CAPTURED PORTAL - TEST SERVER     ║{Colors.RESET}")
             print(f"{Colors.CYAN}╚═══════════════════════════════════════╝{Colors.RESET}")
 
+    os.chdir(original_dir)
     print()
 
 

@@ -27,6 +27,7 @@ private:
     static void handleEnumProgress(AsyncWebServerRequest* request);
     static void handleLLM(AsyncWebServerRequest* request);
     static void handleNetworks(AsyncWebServerRequest* request);
+    static void handleScreenshot(AsyncWebServerRequest* request);
     static void handleNotFound(AsyncWebServerRequest* request);
 
     // Utility

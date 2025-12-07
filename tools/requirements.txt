@@ -1,3 +1,4 @@
 hakcer
+terminaltexteffects<0.12
 platformio
 pyserial

@@ -23,19 +23,58 @@ void Scanner::init() {
 }
 
 void Scanner::scan() {
-    #if DEBUG_SERIAL && DEBUG_WIFI
-    Serial.println("[SCANNER] Scanning for networks...");
-    #endif
+    static bool scanInProgress = false;
+    static unsigned long scanStartTime = 0;
 
-    // Perform scan
-    int numNetworks = WiFi.scanNetworks(false, true);  // async=false, show_hidden=true
+    // Check if async scan is already in progress
+    int scanResult = WiFi.scanComplete();
 
-    if (numNetworks == WIFI_SCAN_FAILED) {
-        #if DEBUG_SERIAL
-        Serial.println("[SCANNER] Scan failed!");
-        #endif
+    // Scan actively running - wait for it
+    if (scanResult == WIFI_SCAN_RUNNING) {
+        // Check for timeout
+        if (millis() - scanStartTime > 10000) {
+            #if DEBUG_SERIAL
+            Serial.println("[SCANNER] Scan timeout, resetting...");
+            #endif
+            WiFi.scanDelete();
+            scanInProgress = false;
+        }
         return;
     }
+
+    // Scan completed with results - process them first
+    if (scanResult >= 0) {
+        scanInProgress = false;
+        // Fall through to process results below
+    }
+    // No scan running or scan failed - start a new one
+    else if (scanResult == WIFI_SCAN_FAILED || scanResult == -2) {
+        if (!scanInProgress) {
+            #if DEBUG_SERIAL && DEBUG_WIFI
+            Serial.println("[SCANNER] Starting async scan...");
+            #endif
+            WiFi.scanNetworks(true, true);  // async=true, show_hidden=true
+            scanInProgress = true;
+            scanStartTime = millis();
+        } else {
+            // Scan was started but not running yet - give it more time
+            if (millis() - scanStartTime > 5000) {
+                // Took too long to start, reset
+                #if DEBUG_SERIAL
+                Serial.println("[SCANNER] Scan failed to start, retrying...");
+                #endif
+                scanInProgress = false;
+            }
+        }
+        return;
+    }
+
+    // Process scan results (scanResult >= 0)
+    if (scanResult < 0) {
+        return;  // Safety check
+    }
+
+    int numNetworks = scanResult;
 
     #if DEBUG_SERIAL && DEBUG_WIFI
     Serial.printf("[SCANNER] Found %d networks\n", numNetworks);

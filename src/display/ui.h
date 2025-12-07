@@ -4,13 +4,15 @@
 #include <Arduino.h>
 #include <TFT_eSPI.h>
 
-// Screen types
+// Screen types (matches web interface tabs)
 enum Screen {
     SCREEN_BOOT,
-    SCREEN_SCANNER,
-    SCREEN_PORTALS,
-    SCREEN_ANALYSIS,
-    SCREEN_LOG,
+    SCREEN_MAIN,       // Main dashboard with tabs
+    SCREEN_SCANNER,    // Network scanner tab
+    SCREEN_PORTALS,    // Portal analysis tab
+    SCREEN_ENUM,       // Enumeration tab
+    SCREEN_LLM,        // LLM insights tab
+    SCREEN_NETWORK_DETAIL,  // Detail view for selected network
     SCREEN_SETTINGS
 };
 
@@ -27,10 +29,20 @@ enum NavAction {
 // App states
 enum AppState {
     STATE_BOOT,
+    STATE_IDLE,
     STATE_SCANNING,
-    STATE_VIEWING_PORTALS,
+    STATE_CONNECTING,
     STATE_ANALYZING,
-    STATE_SETTINGS
+    STATE_ENUMERATING
+};
+
+// Tab indices (for horizontal tab navigation)
+enum TabIndex {
+    TAB_SCANNER = 0,
+    TAB_PORTALS = 1,
+    TAB_ENUM = 2,
+    TAB_LLM = 3,
+    TAB_COUNT = 4
 };
 
 // Color palette structure
@@ -73,17 +85,39 @@ public:
     static int getWidth();
     static int getHeight();
 
+    // Tab navigation
+    static void setTab(TabIndex tab);
+    static TabIndex getCurrentTab();
+
+    // Draw individual UI components
+    static void drawCard(int x, int y, int w, int h, const char* title);
+    static void drawStatsBar(int networks, int open, int portals);
+    static void drawTabBar();
+    static void drawNetworkItem(int index, int y, bool selected);
+    static void drawStatusIcon(int x, int y, bool connected);
+
+    // Modern button-based UI
+    static void drawRoundButton(int x, int y, int radius, const char* label, bool selected, uint16_t color);
+    static void drawSquareButton(int x, int y, int w, int h, const char* label, bool selected, uint16_t color);
+    static void drawBootBanner();
+    static void drawMainMenu();
+
 private:
     static TFT_eSPI tft;
     static Screen currentScreen;
+    static TabIndex currentTab;
     static int selectedIndex;
     static int scrollOffset;
     static ColorPalette colors;
+    static bool inListMode;  // true = navigating list, false = navigating tabs
 
+    // Screen drawing functions
+    static void drawMainScreen();
     static void drawScannerScreen();
     static void drawPortalsScreen();
-    static void drawAnalysisScreen();
-    static void drawLogScreen();
+    static void drawEnumScreen();
+    static void drawLLMScreen();
+    static void drawNetworkDetailScreen();
     static void drawSettingsScreen();
 
     static void initColors();
