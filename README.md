@@ -1,41 +1,78 @@
-
 [![Captured Portal](img/logoish.png)](https://github.com/haKC-ai/CapturedPortal/blob/main/img/logoish.png?raw=true)
 
-[![Captured Portal](img/CapturedPortal.png)]([https://github.com/haKC-ai/CapturedPortal](https://github.com/haKC-ai/CapturedPortal/blob/main/img/CapturedPortal.png?raw=true))
-
+[![Captured Portal](img/CapturedPortal.png)](https://github.com/haKC-ai/CapturedPortal/blob/main/img/CapturedPortal.png?raw=true)
 
 # Captured Portal
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](https://opensource.org/licenses/MIT)
-[![PlatformIO](https://img.shields.io/badge/PlatformIO-ESP32--S3-orange.svg)](https://platformio.org/)
-[![Python 3.13](https://img.shields.io/badge/Python-3.13-blue.svg)](https://www.python.org/)
-[![hakcer](https://img.shields.io/badge/Powered%20by-hakcer-ff00ff.svg)](https://pypi.org/project/hakcer/)
-[![ESP32](https://img.shields.io/badge/Hardware-ESP32--S3-red.svg)](https://www.espressif.com/en/products/socs/esp32-s3)
-[![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](http://makeapullrequest.com)
-[![Authorization Required](https://img.shields.io/badge/Authorization-Required-red.svg)](USAGE_GUIDELINES.md)
-[![Ethical Use](https://img.shields.io/badge/Ethical-Use%20Only-yellow.svg)](CODE_OF_CONDUCT.md)
+<p align="center">
+  <a href="https://platformio.org/"><img src="https://img.shields.io/badge/PlatformIO-ESP32--S3-orange.svg" alt="PlatformIO"></a>
+  <a href="https://www.python.org/"><img src="https://img.shields.io/badge/Python-3.13-blue.svg" alt="Python 3.13"></a>
+  <a href="https://pypi.org/project/hakcer/"><img src="https://img.shields.io/badge/Powered%20by-hakcer-ff00ff.svg" alt="hakcer"></a>
+  <a href="https://www.espressif.com/en/products/socs/esp32-s3"><img src="https://img.shields.io/badge/Hardware-ESP32--S3-red.svg" alt="ESP32"></a>
+</p>
 
-An ESP32-based captive portal scanner, enumerator and analyzer. Detects captive portals, uses on-device LLM to analyze them, and extracts information about the network/venue.
-
+An ESP32-based captive portal scanner and credential enumerator. Automatically detects hotel/venue WiFi captive portals, analyzes login forms to identify field types (room number, last name, access codes), then brute-forces valid combinations using built-in wordlists. Logs all successful credentials discovered.
 ---
+## How it works
 
-## Legal and Ethical Use
+```mermaid
+flowchart TB
+ subgraph Parse["HTML PARSING"]
+        HTML[/"Portal HTML"/]
+        Extract["Extract input fields"]
+        Detect["Detect field types"]
+  end
+ subgraph Fields["FIELD DETECTION"]
+        Room["room, number, rm"]
+        Name["last, surname, family"]
+        Email["email, mail"]
+        Code["code, access, pin"]
+  end
+ subgraph Wordlists["WORDLISTS"]
+        Rooms["~90 Room Numbers<br>101, 102... 1103<br>A1, A2, B1, C3"]
+        Names["~60 Surnames<br>Smith, Johnson<br>Kennedy, Garcia, Patel"]
+  end
+ subgraph Bruteforce["ENUMERATION"]
+        Combo["Generate Combinations"]
+        Test1["101 + Smith"]
+        Test2["101 + Johnson"]
+        Test3["102 + Smith"]
+        TestN["... + ..."]
+        POST["POST to /login"]
+  end
+ subgraph Response["RESPONSE ANALYSIS"]
+        Check{{"Check Response"}}
+        Success["SUCCESS<br>welcome, connected<br>authenticated, success"]
+        Failure["FAILURE<br>invalid, error<br>incorrect, wrong"]
+  end
+ subgraph Results["RESULTS"]
+        Log["Log to successes"]
+        JSON@{ label: "{'room':'101','name':'Kennedy'}" }
+        Stats["Valid combos found<br>Estimated room count<br>Venue insights"]
+  end
+    HTML --> Extract --> Detect
+    Detect --> Room & Name & Email & Code
+    Room & Name --> Rooms & Names
+    Rooms & Names --> Combo
+    Combo --> Test1 & Test2 & Test3 & TestN
+    Test1 & Test2 & Test3 & TestN --> POST
+    POST --> Check
+    Check -- Keywords found --> Success
+    Check -- Error keywords --> Failure
+    Success --> Log --> JSON --> Stats
+    Failure -. Next combo .-> Combo
 
-> **This tool is intended for authorized security testing only.**
-
-Before using this tool, you **must**:
-
-1. Read the [Disclaimer](DISCLAIMER.md)
-2. Review the [Usage Guidelines](USAGE_GUIDELINES.md)
-3. Understand the [Responsible Disclosure Policy](RESPONSIBLE_DISCLOSURE.md)
-4. Agree to the [Code of Conduct](CODE_OF_CONDUCT.md)
-
-**Unauthorized access to computer systems is a crime.** The authors assume no liability for misuse.
-
-By using this software, you accept full responsibility for ensuring your use complies with all applicable laws.
-
----
-
+    JSON@{ shape: lean-r}
+    style HTML fill:#e94560,stroke:#fff,color:#fff
+    style Check fill:#ff00ff,stroke:#fff,color:#fff
+    style JSON fill:#00ff41,stroke:#000,color:#000
+    style Fields fill:#16213e,stroke:#0f3460,stroke-width:2px,color:#fff
+    style Wordlists fill:#0f3460,stroke:#00ff41,stroke-width:2px,color:#fff
+    style Bruteforce fill:#1a1a2e,stroke:#ff00ff,stroke-width:3px,color:#fff
+    style Parse fill:#1a1a2e,stroke:#e94560,stroke-width:2px,color:#fff
+    style Response fill:#16213e,stroke:#00ff41,stroke-width:2px,color:#fff
+    style Results fill:#0f3460,stroke:#e94560,stroke-width:2px,color:#fff
+```
 
 ## Features
 
@@ -51,29 +88,28 @@ By using this software, you accept full responsibility for ensuring your use com
 
 ## Quick Start
 
-
 https://github.com/user-attachments/assets/918cf3b8-493a-48c7-aa8e-d1a774987bee
 
-## How It Works
+## How It's Built 
 
 ### System Architecture
 
 ```mermaid
 graph TB
-    subgraph Device["ESP32-S3 Device"]
-        Scanner["WiFi Scanner"]
-        Portal["Portal Detector"]
-        Enum["Enumerator"]
-        LLM["LLM Engine"]
-        UI["Display UI"]
-        Web["Web Server"]
-        Power["Power Manager"]
+    subgraph Device[ESP32-S3 Device]
+        Scanner[WiFi Scanner]
+        Portal[Portal Detector]
+        Enum[Enumerator]
+        LLM[LLM Engine]
+        UI[Display UI]
+        Web[Web Server]
+        Power[Power Manager]
     end
 
-    subgraph External["External"]
-        WiFi["Open WiFi Networks"]
-        CP["Captive Portals"]
-        Browser["Web Browser"]
+    subgraph External[External]
+        WiFi[Open WiFi Networks]
+        CP[Captive Portals]
+        Browser[Web Browser]
     end
 
     WiFi --> Scanner
@@ -88,14 +124,23 @@ graph TB
     Power --> Web
 
     style Device fill:#1a1a2e,stroke:#0f3460,color:#fff
+    style External fill:#16213e,stroke:#0f3460,color:#fff
     style Scanner fill:#e94560,stroke:#0f3460,color:#fff
     style Portal fill:#e94560,stroke:#0f3460,color:#fff
+    style Enum fill:#e94560,stroke:#0f3460,color:#fff
     style LLM fill:#16213e,stroke:#0f3460,color:#fff
+    style UI fill:#16213e,stroke:#0f3460,color:#fff
+    style Web fill:#16213e,stroke:#0f3460,color:#fff
+    style Power fill:#16213e,stroke:#0f3460,color:#fff
+    style WiFi fill:#0f3460,stroke:#e94560,color:#fff
+    style CP fill:#0f3460,stroke:#e94560,color:#fff
+    style Browser fill:#0f3460,stroke:#e94560,color:#fff
 ```
 
 ### Detection Flow
 
 ```mermaid
+%%{init: {'theme': 'base', 'themeVariables': { 'primaryColor': '#1a1a2e', 'primaryTextColor': '#fff', 'primaryBorderColor': '#e94560', 'lineColor': '#e94560', 'secondaryColor': '#16213e', 'tertiaryColor': '#0f3460', 'actorBkg': '#e94560', 'actorTextColor': '#fff', 'actorLineColor': '#0f3460', 'signalColor': '#e94560', 'signalTextColor': '#fff'}}}%%
 sequenceDiagram
     participant D as Device
     participant W as WiFi Network
@@ -118,6 +163,7 @@ sequenceDiagram
 ### Power Mode States
 
 ```mermaid
+%%{init: {'theme': 'base', 'themeVariables': { 'primaryColor': '#e94560', 'primaryTextColor': '#fff', 'primaryBorderColor': '#0f3460', 'lineColor': '#e94560', 'secondaryColor': '#16213e', 'tertiaryColor': '#1a1a2e', 'background': '#1a1a2e', 'mainBkg': '#1a1a2e', 'stateBkg': '#16213e', 'stateTextColor': '#fff', 'stateLabelColor': '#fff', 'transitionColor': '#e94560', 'transitionLabelColor': '#fff'}}}%%
 stateDiagram-v2
     [*] --> Boot
     Boot --> DetectPower
@@ -137,7 +183,7 @@ stateDiagram-v2
     Analyzing --> Enumerating: Analysis complete
     Enumerating --> Idle: Complete
 
-    Idle --> DeepSleep: Timeout (battery)
+    Idle --> DeepSleep: Timeout
     Idle --> Scanning: User input
 
     DeepSleep --> [*]
@@ -454,6 +500,24 @@ CapturedPortal/
     ├── build.py              # Build & test menu tool
     └── test_portal.py        # Test captive portal server
 ```
+
+---
+
+
+## Legal and Ethical Use
+
+> **This tool is intended for authorized security testing only.**
+
+Before using this tool, you **must**:
+
+1. Read the [Disclaimer](DISCLAIMER.md)
+2. Review the [Usage Guidelines](USAGE_GUIDELINES.md)
+3. Understand the [Responsible Disclosure Policy](RESPONSIBLE_DISCLOSURE.md)
+4. Agree to the [Code of Conduct](CODE_OF_CONDUCT.md)
+
+**Unauthorized access to computer systems is a crime.** The authors assume no liability for misuse.
+
+By using this software, you accept full responsibility for ensuring your use complies with all applicable laws.
 
 ---
 
