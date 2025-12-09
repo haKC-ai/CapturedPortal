@@ -11,66 +11,69 @@
   <a href="https://www.espressif.com/en/products/socs/esp32-s3"><img src="https://img.shields.io/badge/Hardware-ESP32--S3-red.svg" alt="ESP32"></a>
 </p>
 
- ```
-                                                                         /\        
-       _ __ ___________________________________________________________  /  \__ _ _ 
-       __ __ __ ______________________________________________________ \/ /\____ ___
-         |  Notes from the author:                                    \  /         |
-         |                                                             \/          |
-         |  If you or a loved one are fond of wifi #hacking tools, #ESP32 based    |
-         |  devices, #LLMs and other octothorpable terms please keep reading.      |
-         |                                                                         |
-         |  Since I have enough #microcontrollers to be an Adafruit Industries     |
-         |  distribution center I thought I should probably start using them.      |
-         |                                                                         |
-         |  Captured Portal is an ESP32-based captive portal scanner and           |
-         |  credential enumerator. In simple terms, it finds an open AP, decides   |
-         |  if its a captive portal then enumerates it and will tell you exactly   |
-         |  what room and name combinations work. It tests for administrative      |
-         |  and other goodies by using the known vendors that supply the majority  |
-         |  of these services for industry.                                        |
-         |                                                                         |
-         |  It automatically detects hotel/hospital/airport/conference/etc style   |
-         |  WiFi captive portals, analyzes login forms using on device TINY LLMs   |
-         |  to identify field types (room number, last name, access codes), then   |
-         |  brute-forces valid combinations using built-in wordlists.              |
-         |                                                                         |
-         |  It runs standalone on the device, or during build configure it to      |
-         |  host a web server for all the work.                                    |
-         |                                                                         |
-         |  Speaking of configuration, it even includes an interactive build       |
-         |  system with automatic hardware detection, the ability to detect when   |
-         |  the device is on battery or USB power and gain new capabilities when   |
-         |  plugged in. Best of all, because I hate having to setup the            |
-         |  environment when building these things, ive automated that for you,    |
-         |  and builds and flashes everything for you.                             |
-         |                                                                         |
-         |  remember, theres no cheating in hacking.                               |
-         |                                                                         |
-         |                                       Greetz to the real ones. cory     |
-         |*~'`^`'~*-,._.,-*~'`^`'~*-,._.,-*~'`^`'~*-,._.,-*~'`^`'~*-,._.,-*~'`^`'~*|
-                        NAME................................Captured Portal v1.0  
-                          Collective................................haKC.ai
-                          System.............................ESP32 / ESP32-S3
-                          Size.................1 MCU + Wordlists + Audacity
-                          Supplied by............................../dev/COR.23  
-                          Release date....................................2025  
 
-                          GROUP NEWS: haKC.ai Still Looking For Embedded Devs
-                                      & RF Enthusiasts. Hit cory@haKC.ai
+```
+                                                                  /\        
+ _ _ __________________________________________________________  /  \__ _ _ 
+ __ __ __ ____________________________________________________ \/ /\____ ___
+   |  Notes from the author:                                  \  /        |
+   |                                                           \/         |
+   |  If you or a loved one are fond of wifi #hacking tools, #ESP32       |
+   |  based devices, #LLMs and other octothorpable terms please keep      |
+   |  reading.                                                            |
+   |                                                                      |
+   |  Since I have enough #microcontrollers to be an Adafruit Industries  |
+   |  distribution center I thought I should probably start using them.   |
+   |                                                                      |
+   |  Captured Portal is an ESP32-based captive portal scanner and        |
+   |  credential enumerator. In simple terms, it finds an open AP,        |
+   |  decides if its a captive portal then enumerates it and will tell    |
+   |  you exactly what room and name combinations work. It tests for      |
+   |  administrative and other goodies by using the known vendors that    |
+   |  supply the majority of these services for industry.                 |
+   |                                                                      |
+   |  It automatically detects hotel/hospital/airport/conference/etc      |
+   |  style WiFi captive portals, analyzes login forms using on device    |
+   |  TINY LLMs to identify field types (room number, last name, access   |
+   |  codes), then brute-forces valid combinations using built-in         |
+   |  wordlists.                                                          |
+   |                                                                      |
+   |  It runs standalone on the device, or during build configure it to   |
+   |  host a web server for all the work.                                 |
+   |                                                                      |
+   |  Speaking of configuration, it even includes an interactive build    |
+   |  system with automatic hardware detection, the ability to detect     |
+   |  when the device is on battery or USB power and gain new             |
+   |  capabilities when plugged in. Best of all, because I hate having    |
+   |  to setup the environment when building these things, ive automated  |
+   |  that for you, and builds and flashes everything for you.            |
+   |                                                                      |
+   |  remember, theres no cheating in hacking.                            |
+   |                                                                      |
+   |                                     Greetz to the real ones. cory    |
+   |*~'`^`'~*-,._.,-*~'`^`'~*-,._.,-*~'`^`'~*-,._.,-*~'`^`'~*-,._.,-*~'`^*|
+        NAME..............................Captured Portal v1.0  
+        Collective................................haKC.ai
+        System.............................ESP32 / ESP32-S3
+        Size.................1 MCU + Wordlists + Audacity
+        Supplied by............................/dev/COR.23  
+        Release date..................................2025  
 
-                          GR33TZ: SecKC, haKC.ai, Adafruit, the ESP32 silicon
-                                  gods, anyone still flashing firmware at 3am
+        GROUP NEWS: haKC.ai Still Looking For Embedded Devs
+                    & RF Enthusiasts. Hit cory@haKC.ai
 
-                          SHOUTZ:
-                                  [*] Badge lords & their blinkenlights
-                                  [*] Packet sniffers with purpose
-                                  [*] Anyone who reads datasheets for fun
+        GR33TZ: SecKC, haKC.ai, Adafruit, the ESP32 silicon
+                gods, anyone still flashing firmware at 3am
 
-                                     FU to [LAMERZ] still asking for the WiFi
-                                            password at DEF CON
+        SHOUTZ:
+                [*] Badge lords & their blinkenlights
+                [*] Packet sniffers with purpose
+                [*] Anyone who reads datasheets for fun
 
-                               ----- + signed, /dev/COR.23: + -----
+                   FU to [LAMERZ] still asking for the WiFi
+                          password at DEF CON
+
+             ----- + signed, /dev/COR.23: + -----
 ```
 
 ---
